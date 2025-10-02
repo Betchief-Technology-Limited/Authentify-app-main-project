@@ -10,14 +10,15 @@ export const paymentInit = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid amount' });
         }
 
-        const {paymentLink, tx_ref} = await initiateFlutterwavePayment(adminId, amount);
+        const {paymentUrl, tx_ref} = await initiateFlutterwavePayment(adminId, amount);
 
         // ✅ Return a clean response
         res.json({
             success: true,
-            paymentUrl: paymentLink, // <-- frontend will open this
-            amount,
-            tx_ref
+            message: 'Payment initiated',
+            paymentUrl, // <-- frontend will open this
+            tx_ref,
+            amount
         });
     } catch (error) {
         console.error('Payment init error:', error.message);
@@ -29,9 +30,18 @@ export const paymentInit = async (req, res) => {
 export const paymentVerification = async (req, res) => {
     try {
         const { tx_ref } = req.params;
+        if(!tx_ref) {
+            return res.status(400).json({ succes: false, message: 'tx_ref is required' });
+        }
+
         const result = await verifyFlutterwavePayment(tx_ref);
 
-        res.json(result);
+        res.json({
+            sucess: result.success,
+            message: result.message,
+            newBalance: result.newBalance || 0,
+            transaction: result.transaction || null
+        });
     } catch (error) {
         console.error("Payment verify error:", error.message);
         res.status(500).json({ success: false, message: error.message });

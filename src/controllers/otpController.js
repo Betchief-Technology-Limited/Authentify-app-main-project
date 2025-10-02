@@ -1,4 +1,6 @@
+import Otp from "../models/otp.js";
 import { createAndSendOtpSms } from "../services/otpService.js";
+import { totpVerify } from "authentifyotp";
 
 export const sendSmsOtp = async (req, res) => {
    try {
@@ -23,4 +25,47 @@ export const sendSmsOtp = async (req, res) => {
             error: err.message
         })
    }
+}
+
+// Verify OTP code
+export const verifySmsOtp = async (req, res) => {
+    try {
+        const { otpId, code } = req.body;
+
+        if(!otpId || !code) {
+            return res.status(400).json({ message: 'otpId and code are required' })
+        }
+
+        // Find OTP document
+        const otpDoc = await Otp.findById(otpId);
+        if(!otpDoc) {
+            return res.status(404).json({ message: 'OTP record not found' });
+        }
+
+        // Check expiry 
+        if(otpDoc.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'OTP expired' })
+        }
+
+        // Verify code
+        const isValid = totpVerify(otpDoc.secret, code, { window: 1 });
+        if(!isValid) {
+            return res.status(400).json({ message: 'Invalid OTP code' });
+        }
+
+        // Mark as verified
+        otpDoc.status = 'verified';
+        otpDoc.verified = true;
+        await otpDoc.save();
+
+        return res.json({
+            success: true,
+            message: 'OTP verified successfully',
+            otpId: otpDoc._id,
+            verifiedAt: new Date()
+        })
+    } catch (err) {
+        console.error('OTP verification error:', err.message);
+        return res.status(500).json({ message: 'Failed to verify OTP', error: err.message })
+    }
 }

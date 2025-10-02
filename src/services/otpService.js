@@ -13,7 +13,7 @@ export const createAndSendOtpSms = async ({ admin, to }) => {
     const secret = generateSecret(32); //from authentify lib call
     const code = totp(secret) //authentify library call - returns e.g "123456"
 
-    // 3) send via Infobip
+    // 3) send via mobishastra
     const messageText = `Your authentify verification code is ${code}. It expires in ${Math.floor(
         parseInt(process.env.OTP_TTL_SECONDS || "300", 10) / 60
     )} minute(s).`;
