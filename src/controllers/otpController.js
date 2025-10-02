@@ -1,5 +1,5 @@
 import Otp from "../models/otp.js";
-import { createAndSendOtpSms } from "../services/otpService.js";
+import { createAndSendOtpSms } from "../services/OtpService.js";
 import { totpVerify } from "authentifyotp";
 
 export const sendSmsOtp = async (req, res) => {
@@ -52,8 +52,8 @@ export const verifySmsOtp = async (req, res) => {
             return res.status(400).json({ message: 'OTP expired' })
         }
 
-        // Verify code
-        const isValid = totpVerify(otpDoc.secret, code, { window: 1 });
+        // Verify code (token first, secret second)
+        const isValid = totpVerify(code, otpDoc.secret, { window: 1 });
         if(!isValid) {
             return res.status(400).json({ message: 'Invalid OTP code' });
         }

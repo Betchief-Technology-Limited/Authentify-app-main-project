@@ -1,8 +1,9 @@
-import { generateSecret, totp } from "authentifyotp";
+import { generateSecret, bufferToBase32, totp } from "authentifyotp";
 import Otp from "../models/otp.js";
 import { sendSmsViaMobishastra } from "./mobishastraService.js";
 import { checkBalance, deduct } from "./walletService.js";
 
+// Create and send OTP via Mobishastra
 export const createAndSendOtpSms = async ({ admin, to }) => {
     //  1) Check wallet balance
     const hasBalance = await checkBalance(admin._id);
@@ -10,8 +11,9 @@ export const createAndSendOtpSms = async ({ admin, to }) => {
         throw new Error('Insufficient wallet balance. Please top-up so as to be able to send OTP ');
     }
     // 2) generate secret and code
-    const secret = generateSecret(32); //from authentify lib call
-    const code = totp(secret) //authentify library call - returns e.g "123456"
+    const rawSecret = generateSecret(32); //Buffer from authentify lib call
+    const secretBase32 = bufferToBase32(rawSecret) //Store safe base32
+    const code = totp(secretBase32) //authentify library call to generate OTP- returns e.g "123456"
 
     // 3) send via mobishastra
     const messageText = `Your authentify verification code is ${code}. It expires in ${Math.floor(
@@ -24,11 +26,11 @@ export const createAndSendOtpSms = async ({ admin, to }) => {
     const otpDoc = await Otp.create({
         admin: admin ? admin._id : null,
         to,
-        secret,
+        secret: secretBase32,
         expiresAt: new Date(
             Date.now() + parseInt(process.env.OTP_TTL_SECONDS || "300", 10) * 1000
         ),
-        status: smsResp.success ? "delivered" : "failed",
+        status: smsResp.success ? "pending" : "failed",
         provider: "mobishastra",
         providerMessageId: smsResp.messageId,
         providerResponseCode: smsResp.responseCode,
