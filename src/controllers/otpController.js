@@ -28,95 +28,50 @@ export const sendSmsOtp = async (req, res) => {
 };
 
 
-// Verify OTP code
+// // Verify OTP code
 export const verifySmsOtp = async (req, res) => {
     try {
         const { otpId, code } = req.body;
 
-        if (!otpId || !code) {
-            return res.status(400).json({ message: "otpId and code are required" });
+        if(!otpId || !code) {
+            return res.status(400).json({ message: 'otpId and code are required' })
         }
 
+        // Find OTP document
         const otpDoc = await Otp.findById(otpId);
-        if (!otpDoc) {
-            return res.status(404).json({ message: "OTP record not found" });
+        if(!otpDoc) {
+            return res.status(404).json({ message: 'OTP record not found' });
         }
 
-        if (otpDoc.verified || otpDoc.status === "verified") {
-            return res.status(400).json({ message: "OTP already used" });
+        // Already used?
+        if(otpDoc.verified || otpDoc.status === 'delivered') {
+            return res.status(400).json({ message: 'OTP already used' })
         }
 
-        if (otpDoc.expiresAt < new Date()) {
-            return res.status(400).json({ message: "OTP expired" });
+        // Check expiry 
+        if(otpDoc.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'OTP expired' })
         }
 
-        // ✅ FIX: Pass code first, then secret
-        const { ok } = totpVerify(code, otpDoc.secret, { window: 1 });
-
-        if (!ok) {
-            return res.status(400).json({ message: "Invalid OTP code" });
+        // Verify code (token first, secret second)
+        const isValid = totpVerify(code, otpDoc.secret, { window: 1 });
+        if(!isValid) {
+            return res.status(400).json({ message: 'Invalid OTP code' });
         }
 
-        otpDoc.status = "verified";
+        // Mark as verified
+        otpDoc.status = 'delivered';
         otpDoc.verified = true;
         await otpDoc.save();
 
         return res.json({
             success: true,
-            message: "OTP verified successfully",
+            message: 'OTP verified successfully',
             otpId: otpDoc._id,
             verifiedAt: new Date()
-        });
+        })
     } catch (err) {
-        console.error("OTP verification error:", err.message);
-        return res.status(500).json({ message: "Failed to verify OTP", error: err.message });
+        console.error('OTP verification error:', err.message);
+        return res.status(500).json({ message: 'Failed to verify OTP', error: err.message })
     }
 };
-
-// // Verify OTP code
-// export const verifySmsOtp = async (req, res) => {
-//     try {
-//         const { otpId, code } = req.body;
-
-//         if(!otpId || !code) {
-//             return res.status(400).json({ message: 'otpId and code are required' })
-//         }
-
-//         // Find OTP document
-//         const otpDoc = await Otp.findById(otpId);
-//         if(!otpDoc) {
-//             return res.status(404).json({ message: 'OTP record not found' });
-//         }
-
-//         // Already used?
-//         if(otpDoc.verified || otpDoc.status === 'verified') {
-//             return res.status(400).json({ message: 'OTP already used' })
-//         }
-
-//         // Check expiry 
-//         if(otpDoc.expiresAt < new Date()) {
-//             return res.status(400).json({ message: 'OTP expired' })
-//         }
-
-//         // Verify code (token first, secret second)
-//         const isValid = totpVerify(code, otpDoc.secret, { window: 1 });
-//         if(!isValid) {
-//             return res.status(400).json({ message: 'Invalid OTP code' });
-//         }
-
-//         // Mark as verified
-//         otpDoc.status = 'verified';
-//         otpDoc.verified = true;
-//         await otpDoc.save();
-
-//         return res.json({
-//             success: true,
-//             message: 'OTP verified successfully',
-//             otpId: otpDoc._id,
-//             verifiedAt: new Date()
-//         })
-//     } catch (err) {
-//         console.error('OTP verification error:', err.message);
-//         return res.status(500).json({ message: 'Failed to verify OTP', error: err.message })
-//     }
-// }
