@@ -4,7 +4,11 @@ const otpSchema = new mongoose.Schema({
    admin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
    to: { type: String, required: true }, //recipient Phone number(E.164)
    secret: { type: String, required: true }, // totp secret
-   expiresAt: { type: Date, required: true },
+   expiresAt: {
+      type: Date,
+      required: true,
+      index: { expires: 0 } //TTL index --> deletes doc at expiersAt
+   },
    verified: { type: Boolean, default: false },
    status: {
       type: String,

@@ -42,6 +42,11 @@ export const verifySmsOtp = async (req, res) => {
             return res.status(404).json({ message: 'OTP record not found' });
         }
 
+        // Already used?
+        if(otpDoc.verified || otpDoc.status === 'verified') {
+            return res.status(400).json({ message: 'OTP already used' })
+        }
+
         // Check expiry 
         if(otpDoc.expiresAt < new Date()) {
             return res.status(400).json({ message: 'OTP expired' })
